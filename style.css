@@ -1,0 +1,1265 @@
+
+/* =========================================
+   GREEN APPLE — STYLE.CSS
+========================================= */
+
+:root {
+  --paper: #f2ead9;
+  --ink: #1a1111;
+  --brown: #6f4b38;
+
+  --mono:
+    "bulletin-typewriter-mn",
+    "Malgun Gothic",
+    monospace;
+
+  --ko:
+    "Noto Serif KR",
+    "Malgun Gothic",
+    serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--brown);
+  outline-offset: 4px;
+}
+
+
+/* =========================================
+   MAIN
+========================================= */
+
+.app {
+  position: relative;
+
+  width: 100%;
+  height: 100dvh;
+  min-height: 100vh;
+
+  isolation: isolate;
+  overflow: hidden;
+}
+
+
+/* =========================================
+   BACKGROUND
+========================================= */
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+
+  pointer-events: none;
+
+  transition: opacity .8s ease;
+}
+
+
+/* POLAROID */
+
+.bg-photo {
+  position: absolute;
+
+  width: clamp(250px, 31vw, 410px);
+  height: auto;
+
+  left: 14%;
+  top: 49%;
+
+  transform:
+    translateY(-50%)
+    rotate(-9deg);
+
+  filter:
+    saturate(1.06)
+    contrast(1.03)
+    drop-shadow(5px 12px 10px #382d1c2e);
+}
+
+
+/* ALBUM TITLE */
+
+.title-art {
+  position: absolute;
+
+  width: min(105vw, 1500px);
+  max-width: none;
+  height: auto;
+
+  left: 50%;
+  top: 49%;
+
+  transform:
+    translate(-50%, -50%)
+    rotate(-2deg);
+
+  opacity: .83;
+}
+
+
+/* FULLSCREEN TRACING PAPER */
+
+.screen-vellum {
+  position: absolute;
+  inset: 0;
+
+  background: rgba(247, 240, 221, .24);
+
+  backdrop-filter:
+    blur(.55px) saturate(.94);
+
+  -webkit-backdrop-filter:
+    blur(.55px) saturate(.94);
+}
+
+.screen-vellum::after {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  opacity: .3;
+
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 10px,
+      rgba(108, 91, 58, .03) 10px 11px
+    );
+}
+
+
+/* =========================================
+   3D CANVAS
+========================================= */
+
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+
+  width: 100%;
+  height: 100dvh;
+
+  overflow: hidden;
+  touch-action: none;
+}
+
+#apple-canvas {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  touch-action: none;
+
+  cursor: grab;
+  outline: 0;
+
+  filter:
+    saturate(1.04)
+    contrast(.96)
+    brightness(1.01)
+    sepia(.07)
+    hue-rotate(-3deg);
+}
+
+#apple-canvas:active {
+  cursor: grabbing;
+}
+
+.fallback {
+  position: absolute;
+  inset: 0;
+
+  display: grid;
+  place-items: center;
+
+  padding: 24px;
+
+  text-align: center;
+  font-size: 13px;
+}
+
+
+/* =========================================
+   INTRO STATE
+========================================= */
+
+.app.is-intro .backdrop {
+  opacity: 0;
+}
+
+.app.is-intro.is-revealing .backdrop {
+  opacity: 1;
+}
+
+.app.is-intro #sticker-book {
+  display: none !important;
+}
+
+
+/* =========================================
+   FULLSCREEN SCAN TEXTURE
+========================================= */
+
+body::after {
+  content: "";
+
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+
+  pointer-events: none;
+
+  background:
+    url("./assets/scan-texture.jpg")
+    center / cover no-repeat;
+
+  mix-blend-mode: multiply;
+  opacity: .13;
+}
+
+
+/* =========================================
+   GUIDE MESSAGE
+========================================= */
+
+.intro-note,
+.found-note {
+  position: fixed;
+
+  top: clamp(42px, 7dvh, 88px);
+  left: 50%;
+
+  z-index: 30;
+
+  transform: translateX(-50%);
+
+  width: max-content;
+  max-width: calc(100vw - 16px);
+
+  pointer-events: none;
+}
+
+.intro-note-paper,
+.found-note-paper {
+  position: relative;
+
+  padding: 11px 17px;
+  margin: 0;
+
+  background: rgba(247, 240, 224, .58);
+
+  box-shadow:
+    2px 4px 12px #3b2b2510;
+
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+
+  clip-path: polygon(
+    0 6%,
+    9% 1%,
+    23% 3%,
+    41% 0,
+    60% 3%,
+    79% 1%,
+    100% 5%,
+    99% 32%,
+    100% 69%,
+    98% 97%,
+    76% 100%,
+    52% 97%,
+    28% 100%,
+    1% 96%,
+    2% 69%
+  );
+
+  text-align: center;
+}
+
+.intro-note-text,
+.found-note-paper {
+  margin: 0;
+
+  font-family: var(--mono);
+
+  font-size: clamp(14px, 3.75vw, 21px);
+  font-weight: 400;
+  line-height: 1.2;
+
+  letter-spacing: -.03em;
+
+  color: var(--brown);
+  white-space: nowrap;
+
+  text-shadow:
+    .35px .35px .45px #6f4b3860;
+}
+
+.hint {
+  position: fixed;
+
+  bottom:
+    calc(20px + env(safe-area-inset-bottom));
+
+  left: 50%;
+  z-index: 40;
+
+  transform: translateX(-50%);
+
+  max-width: 90vw;
+  width: max-content;
+
+  padding: 10px 15px;
+
+  border-radius: 20px;
+
+  background: #333a27;
+  color: white;
+
+  font-size: 12px;
+  pointer-events: none;
+}
+
+
+/* =========================================
+   STICKER COLLECTION
+========================================= */
+
+.sticker-book {
+  position: fixed;
+
+  top: 50%;
+  right: 2.5vw;
+
+  z-index: 45;
+
+  transform: translateY(-50%);
+
+  width: 135px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 7px;
+
+  margin: 0;
+  padding: 0;
+
+  background: transparent;
+  border: 0;
+}
+
+
+/* STICKER GRID */
+
+.book-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 2px;
+
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+
+/* STICKER ITEM */
+
+.book-item {
+  display: grid;
+  place-items: center;
+
+  width: 90px;
+  height: 90px;
+  flex: none;
+
+  margin: 0;
+  padding: 0;
+
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+
+  opacity: 1;
+  overflow: visible;
+
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.book-item.is-unlocked {
+  cursor: grab;
+}
+
+
+/* STICKER THUMB */
+
+.book-thumb {
+  display: grid;
+  place-items: center;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: visible;
+}
+
+.book-thumb img {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+  object-position: center;
+
+  pointer-events: none;
+  transform-origin: center;
+
+  filter:
+    drop-shadow(1px 2px 2px #291c161f);
+}
+
+
+/* FRONT AND BACK SCALE */
+
+.book-item:not(.is-unlocked) img {
+  transform: scale(var(--back-scale, .93));
+}
+
+.book-item.is-unlocked img {
+  transform: scale(var(--front-scale, 1.7));
+}
+
+
+
+/* =====================================
+   STICKER COLLECTION SIZE
+===================================== */
+
+/* 01 LET ME */
+.book-item[data-track="0"] {
+  --back-scale: .94;
+  --front-scale: 1.22;
+  --back-y: 2px;
+}
+
+/* 02 A HOME */
+.book-item[data-track="1"] {
+  --back-scale: .96;
+  --front-scale: 1.22;
+  --back-y: 2px;
+}
+
+/* 03 TBH */
+.book-item[data-track="2"] {
+  --back-scale: .94;
+  --front-scale: 1.02;
+  --back-y: 0px;
+}
+
+/* 04 TRY ME */
+.book-item[data-track="3"] {
+  --back-scale: .91;
+  --front-scale: .93;
+  --back-y: 0px;
+}
+
+/* 05 사랑은냉동실에 */
+.book-item[data-track="4"] {
+  --back-scale: .96;
+  --front-scale: 1.20;
+  --back-y: 0px;
+}
+
+/* 이미지의 세로 중심 보정 */
+
+#sticker-book .book-item:not(.is-unlocked) img {
+  transform:
+    translateY(var(--back-y, 0px))
+    scale(var(--back-scale));
+}
+
+#sticker-book .book-item.is-unlocked img {
+  transform:
+    scale(var(--front-scale));
+}
+
+@media (max-width: 700px) {
+  #book-grid {
+    grid-template-columns:
+      repeat(5, minmax(0, 1fr));
+
+    gap: 0;
+    align-items: center;
+    justify-items: center;
+  }
+
+  #book-grid .book-item,
+  #book-grid .book-thumb {
+    display: grid;
+    place-items: center;
+  }
+}
+
+
+
+/* DRAG PREVIEW */
+
+.book-drag-ghost {
+  position: fixed;
+  z-index: 600;
+
+  width: 120px;
+  height: 120px;
+
+  object-fit: contain;
+
+  transform:
+    translate(-50%, -50%)
+    scale(1.4);
+
+  pointer-events: none;
+  user-select: none;
+
+  filter:
+    drop-shadow(2px 5px 4px #1a11112e);
+}
+
+
+/* =========================================
+   SHARE / RESET
+========================================= */
+
+#share-btn,
+#reset-btn {
+  appearance: none;
+  -webkit-appearance: none;
+
+  position: static;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+
+  gap: 6px;
+
+  margin: 0;
+  padding: 0;
+
+  width: auto;
+  height: auto;
+
+  background: transparent !important;
+
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  box-shadow: none !important;
+  outline: 0 !important;
+
+  color: var(--brown) !important;
+
+  font:
+    400 18px/1.25
+    var(--mono);
+
+  white-space: nowrap;
+
+  text-shadow:
+    .3px .3px .45px #6f4b3850;
+}
+
+#share-btn:focus-visible,
+#reset-btn:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+#share-btn .share-icon {
+  font-size: 1em;
+}
+
+#reset-btn {
+  width: 44px;
+  height: 35px;
+
+  font-size: 27px;
+}
+
+
+/* =========================================
+   TRACK POPUP
+========================================= */
+
+.popup {
+  position: fixed;
+  inset: 0;
+
+  z-index: 300;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 15px;
+
+  background: rgba(14, 10, 9, .78);
+
+  backdrop-filter:
+    blur(9px) brightness(.66);
+
+  -webkit-backdrop-filter:
+    blur(9px) brightness(.66);
+}
+
+.popup-panel {
+  position: relative;
+
+  width: min(95vw, 510px);
+  max-height: 94dvh;
+
+  overflow-y: auto;
+
+  padding: 30px 12px 20px;
+
+  text-align: center;
+  background: transparent;
+
+  animation:
+    labelFlip .55s cubic-bezier(.16,1,.3,1) both;
+}
+
+
+/* CLOSE BUTTON */
+
+.popup-close {
+  position: absolute;
+
+  top: 0;
+  right: 10px;
+  z-index: 10;
+
+  width: 44px;
+  height: 44px;
+
+  padding: 0;
+
+  border: 0;
+  border-radius: 0;
+
+  background: transparent;
+
+  color: #f7eedd;
+
+  font:
+    400 37px/1
+    var(--mono);
+
+  text-shadow:
+    0 2px 3px #140e0bcc;
+}
+
+
+/* STICKER BACK */
+
+.popup-backside {
+  position: relative;
+
+  width: min(100%, 430px);
+  aspect-ratio: 1;
+
+  margin: 0 auto 10px;
+}
+
+.popup-back-art {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+
+  filter:
+    drop-shadow(
+      0 14px 13px #140f0d55
+    );
+}
+
+
+/* CREDIT BLOCK */
+
+.popup-credit-wrap {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  transform: translate(-50%, -50%);
+
+  width: 67%;
+  max-height: 57%;
+
+  display: grid;
+  place-items: center;
+
+  overflow: hidden;
+  z-index: 1;
+}
+
+.popup-index {
+  width: 100%;
+
+  margin: 0 0 6px;
+  padding-left: 39%;
+
+  text-align: left;
+
+  font:
+    400 11px/1.1
+    var(--mono);
+
+  color: var(--ink);
+}
+
+.popup-credits {
+  width: 100%;
+
+  display: grid;
+  gap: 5px;
+
+  color: var(--ink);
+
+  font:
+    400 clamp(10px, 2.55vw, 13px)/1.28
+    var(--mono);
+}
+
+
+/* ROLE RIGHT / NAME LEFT */
+
+.credit-row {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 39%) minmax(0, 61%);
+
+  column-gap: 8px;
+
+  align-items: baseline;
+  width: 100%;
+}
+
+.credit-role {
+  text-align: right;
+  white-space: nowrap;
+
+  font-weight: 400;
+}
+
+.credit-names {
+  text-align: left;
+
+  font-weight: 700;
+  -webkit-text-stroke: .2px currentColor;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* LONG CREDIT TRACKS */
+
+.popup[data-track="3"] .popup-credit-wrap,
+.popup[data-track="4"] .popup-credit-wrap {
+  width: 70%;
+}
+
+.popup[data-track="3"] .popup-credits,
+.popup[data-track="4"] .popup-credits {
+  font-size: clamp(9px, 2.35vw, 12px);
+  gap: 4px;
+}
+
+
+/* TRACK TITLE */
+
+.popup-title {
+  margin: 3px auto 12px;
+
+  max-width: 100%;
+
+  font:
+    400 clamp(30px, 7.5vw, 54px)/1.1
+    var(--mono);
+
+  letter-spacing: -.05em;
+
+  color: #f4e7cf;
+
+  overflow-wrap: anywhere;
+
+  text-shadow:
+    0 2px 8px #09070788;
+}
+
+
+/* KOREAN TITLE */
+
+.popup-title.ko-title {
+  font:
+    600 clamp(26px, 6vw, 42px)/1.3
+    var(--ko);
+
+  letter-spacing: -.04em;
+}
+
+
+/* AUDIO — ONLY PLAY/PAUSE */
+
+.play-pause {
+  display: inline-grid;
+  place-items: center;
+
+  margin: 0 auto;
+  padding: 0;
+
+  width: 42px;
+  height: 42px;
+
+  border: 1px solid #f0e5d0;
+  border-radius: 50%;
+
+  background: transparent;
+  color: #f0e5d0;
+
+  font: 19px/1 var(--mono);
+}
+
+
+/* POPUP ANIMATION */
+
+@keyframes labelFlip {
+  from {
+    opacity: 0;
+    transform:
+      translateY(40px)
+      rotate(-5deg)
+      scale(.9);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translateY(0)
+      rotate(-1deg)
+      scale(1);
+  }
+}
+
+
+/* =========================================
+   RED PAINT WIPE
+========================================= */
+
+.paint-wipe {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 80;
+  overflow: hidden;
+}
+
+.paint-swipe {
+  position: absolute;
+  left: -30%;
+  width: 160%;
+  height: 14%;
+  border-radius: 999px;
+  background: rgba(160, 42, 40, 0.72);
+  filter: blur(8px);
+  mix-blend-mode: multiply;
+  opacity: 0;
+  transform: translateX(-120%) rotate(-10deg);
+}
+
+.swipe-1 { top: 32%; }
+.swipe-2 { top: 47%; }
+.swipe-3 { top: 60%; }
+
+.paint-wipe.is-active .swipe-1 {
+  animation: paintSwipe 0.95s cubic-bezier(.22,.61,.36,1) 0s both;
+}
+.paint-wipe.is-active .swipe-2 {
+  animation: paintSwipe 1.0s cubic-bezier(.22,.61,.36,1) .08s both;
+}
+.paint-wipe.is-active .swipe-3 {
+  animation: paintSwipe 1.05s cubic-bezier(.22,.61,.36,1) .16s both;
+}
+
+@keyframes paintSwipe {
+  0% {
+    opacity: 0;
+    transform: translateX(-120%) rotate(-10deg);
+  }
+  10% {
+    opacity: .95;
+  }
+  55% {
+    opacity: .88;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(120%) rotate(-10deg);
+  }
+}
+
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 700px) {
+
+  /* POLAROID */
+
+  .bg-photo {
+    width: min(65vw, 300px);
+
+    left: -10%;
+    top: 30%;
+
+    transform:
+      translateY(-50%)
+      rotate(-10deg);
+  }
+
+
+  /* TITLE */
+
+  .title-art {
+    width: min(88vw, 470px);
+
+    left: 58%;
+    top: 69%;
+
+    transform:
+      translate(-50%, -50%)
+      rotate(7deg);
+
+    opacity: .70;
+  }
+
+
+  /* GUIDE POSITION */
+
+  .intro-note,
+  .found-note {
+    top: calc(
+      clamp(185px, 25dvh, 265px)
+      + env(safe-area-inset-top)
+    );
+  }
+
+  .intro-note-text,
+  .found-note-paper {
+    font-size: clamp(14px, 3.75vw, 21px);
+  }
+
+
+  /* COLLECTION */
+
+  .sticker-book {
+    top: auto;
+
+    left: 50%;
+    right: auto;
+
+    bottom:
+      calc(18px + env(safe-area-inset-bottom));
+
+    transform: translateX(-50%);
+
+    width: min(94vw, 430px);
+    height: clamp(175px, 23dvh, 230px);
+
+    gap: 0;
+  }
+
+
+  /* FIVE STICKERS */
+
+  #book-grid {
+    display: grid;
+
+    grid-template-columns:
+      repeat(5, minmax(0, 1fr));
+
+    width: min(88vw, 400px);
+    height: 68px;
+
+    flex: 0 0 68px;
+
+    gap: 3px;
+
+    margin: 0 auto;
+
+    align-items: center;
+    justify-items: center;
+  }
+
+  #book-grid .book-item {
+    width: 100%;
+    height: 68px;
+
+    min-height: 0;
+  }
+
+
+  /* SHARE AT BOTTOM */
+
+  #share-btn {
+    margin-top: auto;
+    font-size: 18px;
+  }
+
+
+  /* RESET BELOW SHARE */
+
+  #reset-btn {
+    margin-top: 9px;
+  }
+
+
+  /* POPUP */
+
+  .popup-panel {
+    width: min(96vw, 440px);
+
+    padding: 25px 4px 14px;
+  }
+
+  .popup-backside {
+    width: min(100%, 380px);
+  }
+
+  .popup-credit-wrap {
+    width: 69%;
+  }
+
+  .popup-credits {
+    gap: 4px;
+  }
+
+  .credit-row {
+    column-gap: 6px;
+  }
+
+  body::after {
+    opacity: .11;
+  }
+
+  .book-drag-ghost {
+    width: 115px;
+    height: 115px;
+  }
+}
+
+
+/* =========================================
+   SHORT MOBILE
+========================================= */
+
+@media (max-width: 700px) and (max-height: 720px) {
+
+  .sticker-book {
+    height: clamp(150px, 24dvh, 185px);
+
+    bottom:
+      calc(6px + env(safe-area-inset-bottom));
+  }
+
+  #share-btn {
+    font-size: 16px;
+  }
+
+  #reset-btn {
+    height: 31px;
+    margin-top: 3px;
+  }
+
+  .intro-note,
+  .found-note {
+    top:
+      calc(155px + env(safe-area-inset-top));
+  }
+}
+
+
+/* =========================================
+   ACCESSIBILITY
+========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .backdrop {
+    transition: none;
+  }
+
+  .popup-panel,
+  .paint-swipe {
+    animation: none !important;
+  }
+}
+
+/* FIRST VISIT SOUND GUIDE */
+
+.sound-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: grid;
+  place-items: center;
+
+  padding: 20px;
+
+  background: rgba(26, 17, 17, .48);
+  backdrop-filter: blur(6px);
+}
+
+
+.sound-paper {
+  position: relative;
+
+  width: min(88vw, 350px);
+  padding: 38px 27px 34px;
+
+  background-color: #eee4cf;
+  background-image: url("./assets/scan-texture.jpg");
+  background-size: cover;
+  background-position: center;
+  background-blend-mode: soft-light;
+
+  opacity: 1;
+
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  color: #1a1111;
+  text-align: center;
+
+  box-shadow: 3px 8px 25px rgba(26,17,17,.17);
+
+  clip-path: polygon(
+    0% 4%, 13% 1%, 28% 3%,
+    43% 0%, 61% 3%, 79% 1%,
+    100% 4%, 98% 29%, 100% 56%,
+    98% 96%, 80% 99%, 60% 97%,
+    42% 100%, 21% 97%, 1% 99%
+  );
+}
+
+#sound-title {
+  font-size: 25px;
+  margin: 0 0 25px;
+  color: #1a1111;
+}
+
+
+.sound-actions {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+}
+
+.sound-actions button {
+  border: 0;
+  background: transparent;
+  color: #6f4b38;
+
+  font-family: var(--mono);
+  font-size: 15px;
+}
+
+#sound-on {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+
+#sound-toggle {
+  position: fixed;
+  top: calc(20px + env(safe-area-inset-top));
+  right: 20px;
+  z-index: 90;
+
+  border: 0;
+  background: transparent;
+  color: #6f4b38;
+
+  font-size: 23px;
+}
+
+/* =====================================
+   COLLECTION DRAG HINT
+===================================== */
+
+.book-item.collection-nudge .book-thumb {
+  animation: collectionNudge 1.6s ease-in-out both;
+}
+
+@keyframes collectionNudge {
+  0%, 100% {
+    transform: translateY(0) rotate(0);
+  }
+
+  20% {
+    transform: translateY(-13px) rotate(-6deg);
+  }
+
+  40% {
+    transform: translateY(-3px) rotate(0);
+  }
+
+  65% {
+    transform: translateY(-10px) rotate(4deg);
+  }
+
+  85% {
+    transform: translateY(-2px) rotate(0);
+  }
+}

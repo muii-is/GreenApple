@@ -1,0 +1,280 @@
+
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta name="theme-color" content="#f2ead9">
+  <meta
+    name="description"
+    content="GREEN APPLE — peel to listen"
+  >
+
+  <title>GREEN APPLE</title>
+
+  <!-- ADOBE FONTS -->
+  <link
+    rel="stylesheet"
+    href="https://use.typekit.net/rwf6xnp.css"
+  >
+
+  <!-- KOREAN TITLE FONT -->
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&display=swap"
+  >
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="./style.css">
+
+  <!-- THREE.JS -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module" src="./main.js"></script>
+</head>
+
+<body>
+
+  <main class="app is-intro" id="app">
+
+    <!-- BACKGROUND -->
+    <div class="backdrop" aria-hidden="true">
+
+      <img
+        class="bg-photo"
+        src="./assets/cover-photo.png"
+        alt=""
+      >
+
+      <img
+        class="title-art"
+        src="./assets/greenapple-title.png"
+        alt=""
+      >
+
+      <div class="screen-vellum"></div>
+
+    </div>
+
+
+    <!-- 3D APPLE -->
+    <section
+      class="stage"
+      id="stage"
+      aria-label="GREEN APPLE interactive experience"
+    >
+
+      <canvas
+        id="apple-canvas"
+        aria-label="사과를 드래그해 청사과를 찾고 스티커를 떼어보세요"
+      ></canvas>
+
+      <p id="fallback" class="fallback" hidden>
+        3D 모델을 불러오지 못했습니다.
+        GLB 경로를 확인해 주세요.
+      </p>
+
+    </section>
+
+
+    <!-- GUIDE MESSAGE -->
+    <div
+      id="intro-note"
+      class="intro-note"
+      role="status"
+      aria-live="polite"
+    >
+      <div class="intro-note-paper">
+        <p class="intro-note-text">
+          Drag the apples to find the green apple
+        </p>
+      </div>
+    </div>
+
+
+    <!-- FOUND MESSAGE -->
+    <div
+      id="found-note"
+      class="found-note"
+      role="status"
+      aria-live="polite"
+      hidden
+    >
+      <div class="found-note-paper">
+        There's your green apple
+      </div>
+    </div>
+
+
+    <!-- TOUCH HINT -->
+    <p id="hint" class="hint" hidden>
+      Drag a sticker to peel it
+    </p>
+
+
+    <!-- STICKER COLLECTION -->
+    <aside
+      id="sticker-book"
+      class="sticker-book"
+      aria-label="Sticker collection"
+      hidden
+    >
+
+      <div
+        id="book-grid"
+        class="book-grid"
+      ></div>
+
+      <!-- SHARE -->
+      <button
+        id="share-btn"
+        class="share-btn"
+        type="button"
+        hidden
+        aria-label="Share my apple"
+      >
+        <span>Share my apple</span>
+        <span class="share-icon" aria-hidden="true">↗</span>
+      </button>
+
+      <!-- RESET -->
+      <button
+        id="reset-btn"
+        class="reset-btn"
+        type="button"
+        aria-label="모든 스티커 다시 붙이기"
+      >
+        ↺
+      </button>
+
+    </aside>
+
+  </main>
+
+
+  <!-- TRACK POPUP -->
+  <div
+    id="popup"
+    class="popup"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="popup-title"
+    hidden
+  >
+
+    <div class="popup-panel">
+
+      <!-- CLOSE -->
+      <button
+        id="popup-close"
+        class="popup-close"
+        type="button"
+        aria-label="닫기"
+      >
+        ×
+      </button>
+
+
+      <!-- STICKER BACK -->
+      <div class="popup-backside">
+
+        <img
+          id="popup-back"
+          class="popup-back-art"
+          src="./assets/sticker-backs/back-01.png"
+          alt=""
+        >
+
+        <!-- PRINTED CREDITS -->
+        <div class="popup-credit-wrap">
+
+          <p id="popup-index" class="popup-index">
+            NO.1
+          </p>
+
+          <div
+            id="popup-credits"
+            class="popup-credits"
+          ></div>
+
+        </div>
+
+      </div>
+
+
+      <!-- TRACK TITLE -->
+      <h1
+        id="popup-title"
+        class="popup-title"
+      >
+        let me…
+      </h1>
+
+
+      <!-- SIMPLE AUDIO CONTROL -->
+      <button
+        id="play-pause"
+        class="play-pause"
+        type="button"
+        aria-label="재생 또는 일시정지"
+      >
+        ▶
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- AUDIO -->
+  <audio id="audio" preload="none"></audio>
+
+
+  <!-- RED PAINT TRANSITION -->
+  <div
+    id="paint-wipe"
+    class="paint-wipe"
+    aria-hidden="true"
+    hidden
+  >
+    <div class="paint-swipe swipe-1"></div>
+    <div class="paint-swipe swipe-2"></div>
+    <div class="paint-swipe swipe-3"></div>
+  </div>
+
+  <!-- FIRST VISIT SOUND GUIDE -->
+  <div id="sound-intro" class="sound-intro"
+      role="dialog" aria-modal="true"
+      aria-labelledby="sound-title">
+
+    <div class="sound-paper">
+      <p id="sound-title">Better with sound</p>
+
+      <div class="sound-actions">
+        <button id="sound-on" type="button">Sound on ↗</button>
+        <button id="sound-off" type="button">Not now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOUND TOGGLE -->
+  <button id="sound-toggle" type="button"
+          aria-label="Toggle sound" hidden>
+    ♫
+  </button>
+
+
+</body>
+</html>
