@@ -120,9 +120,42 @@ let soundEnabled = false;
 const soundIntro = $('sound-intro');
 const soundToggle = $('sound-toggle');
 
+
+// ========================================
+// MOBILE AUDIO SESSION FIX
+// ========================================
+
+function setPlaybackAudioSession() {
+
+  try {
+
+    if (navigator.audioSession) {
+
+      navigator.audioSession.type = 'playback';
+
+      console.log(
+        'Audio session:',
+        navigator.audioSession.type
+      );
+
+    }
+
+  } catch (error) {
+
+    console.warn(
+      'Audio session setting unavailable:',
+      error
+    );
+
+  }
+}
+
+
 function setSound(enabled) {
   soundEnabled = enabled;
   if (enabled) {
+    setPlaybackAudioSession();
+
     unlockSfxOnGesture();
   }
 
