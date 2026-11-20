@@ -25,7 +25,7 @@ const tracks = [
     file: '01-let-me.wav'
   },
   {
-    title: 'a home',
+    title: 'a home*',
     credits: {
       composed: 'XANI, Sam Calisto',
       lyrics: 'XANI',
@@ -101,6 +101,7 @@ const fallback = $('fallback');
 const introNote = $('intro-note');
 const foundNote = $('found-note');
 const hint = $('hint');
+const introDragMini = $('intro-drag-mini');
 
 const book = $('sticker-book');
 const bookGrid = $('book-grid');
@@ -112,6 +113,7 @@ const audio = $('audio');
 const playBtn = $('play-pause');
 const wipe = $('paint-wipe');
 
+const rotateHint = $('rotate-hint');
 
 let soundEnabled = false;
 
@@ -120,6 +122,7 @@ const soundToggle = $('sound-toggle');
 
 function setSound(enabled) {
   soundEnabled = enabled;
+  syncSfxEnabled();
 
   // 음악 재생 허용 또는 음소거
   audio.muted = !enabled;
@@ -139,13 +142,13 @@ $('sound-on').addEventListener('click', () => {
   setSound(true);
 });
 
-$('sound-off').addEventListener('click', () => {
-  setSound(false);
-});
 
 soundToggle.addEventListener('click', () => {
   setSound(!soundEnabled);
 });
+
+const loadingScreen = $('loading-screen');
+
 
 
 // ========================================
@@ -264,7 +267,7 @@ const audioDuration = 20;
 // ========================================
 
 const GUIDE = {
-  intro: 'Drag the apples to find the green apple',
+  intro: 'Take away the apples to find the green apple',
   found: "There's your green apple",
   peel: 'Peel a sticker to hear a track',
   collection: 'Drag stickers onto your apple'
@@ -712,15 +715,24 @@ function loadGreen() {
           renderer.capabilities.getMaxAnisotropy()
         );
 
+        
         const material =
           new THREE.MeshStandardMaterial({
             map: tex,
+
+            // 따뜻한 빈티지 색감 + 약간 낮은 명도
+            color: '#eee5d5',
+
             transparent: true,
             alphaTest: .06,
             side: THREE.DoubleSide,
             depthWrite: false,
-            roughness: .88
+
+            // 사과 표면과 비슷한 무광 질감
+            roughness: .96,
+            metalness: 0
           });
+
 
         const geometry = makePatch(t, model);
 
@@ -779,6 +791,8 @@ function loadGreen() {
       );
 
       if (fallback) fallback.hidden = false;
+      if (soundIntro) soundIntro.hidden = true;
+      hideLoadingScreen();
     }
   );
 }
@@ -861,6 +875,7 @@ function loadRed() {
       );
 
       finishIntro();
+      hideLoadingScreen();
     }
   );
 }
@@ -881,6 +896,32 @@ const random = () => {
 
 const between = (a, b) =>
   a + (b - a) * random();
+
+
+
+// ========================================
+// LOADING SCREEN
+// ========================================
+
+
+
+function hideLoadingScreen() {
+
+  if (!loadingScreen || loadingScreen.hidden) return;
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+
+      loadingScreen.classList.add('is-ready');
+
+      setTimeout(() => {
+        loadingScreen.hidden = true;
+      }, 550);
+
+    });
+  });
+}
+
 
 
 // ========================================
@@ -1056,8 +1097,157 @@ function buildPile() {
   app.classList.remove('is-revealing');
 
   setGuide(GUIDE.intro);
+  hideLoadingScreen();
 }
 
+// ========================================
+// INTRO APPLE DRAG CUE
+// ========================================
+
+let introCuePiece = null;
+let introCueOrigin = null;
+let introCueStartedAt = 0;
+let introCueDone = false;
+
+function stopIntroDragCue() {
+  if (introCuePiece && introCueOrigin && !introCuePiece.gone) {
+    introCuePiece.root.position.copy(introCueOrigin);
+  }
+
+  hideIntroDragMini();
+
+  introCueDone = true;
+  introCuePiece = null;
+  introCueOrigin = null;
+}
+
+
+function updateIntroDragCue(now) {
+
+  if (
+    introState !== 'active' ||
+    !soundIntro.hidden ||
+    introPointer ||
+    introCueDone
+  ) return;
+
+  if (!introCuePiece) {
+
+    introCuePiece = introPieces.at(-10);
+
+    if (!introCuePiece) return;
+
+    introCueOrigin =
+      introCuePiece.root.position.clone();
+
+    introCueStartedAt = now;
+  }
+
+  const elapsed = now - introCueStartedAt;
+
+  // 시작 전 잠깐 기다리기
+  if (elapsed < 500) return;
+  showIntroDragMini();
+
+  // 전체 모션 시간
+  const duration = 2400;
+
+  const t = Math.min(
+    (elapsed - 500) / duration,
+    1
+  );
+
+  // 부드러운 가속과 감속
+  const easeInOut = x =>
+    x < .5
+      ? 4 * x * x * x
+      : 1 - Math.pow(-2 * x + 2, 3) / 2;
+
+  let movement = 0;
+
+  if (t < .28) {
+
+    // 첫 번째: 천천히 출발 → 가속 → 감속
+    movement = easeInOut(t / .28);
+
+  } else if (t < .52) {
+
+    // 자연스럽게 제자리로 돌아오기
+    movement = 1 - easeInOut(
+      (t - .28) / .24
+    );
+
+  } else if (t < .62) {
+
+    // 잠깐 정지
+    movement = 0;
+
+  } else if (t < .79) {
+
+    // 두 번째: 조금 더 작은 움직임
+    movement = .55 * easeInOut(
+      (t - .62) / .17
+    );
+
+  } else {
+
+    // 천천히 마무리
+    movement = .55 * (
+      1 - easeInOut((t - .79) / .21)
+    );
+  }
+
+  const distance = introScale * 2.2;
+
+  introCuePiece.root.position.set(
+    introCueOrigin.x + movement * distance * .20,
+    introCueOrigin.y + movement * distance * .035,
+    introCueOrigin.z
+  );
+
+  // DRAG LABEL FOLLOWS THE MOVING APPLE
+
+  scene.updateMatrixWorld(true);
+
+  const worldPos = introCuePiece.root.getWorldPosition(
+    new THREE.Vector3()
+  );
+
+  const screenPos = worldPos.clone().project(camera);
+
+  const rect = stage.getBoundingClientRect();
+
+  const x = (screenPos.x + 1) * .5 * rect.width;
+  const y = (1 - screenPos.y) * .5 * rect.height;
+
+  // 사과의 화면상 크기에 따라 라벨 위치 조정
+  const radiusPx =
+    introScale * 1.1 *
+    rect.height *
+    camera.projectionMatrix.elements[5] /
+    (2 * Math.max(.1, camera.position.z - worldPos.z));
+
+  // 사과의 오른쪽 위에 배치
+  introDragMini.style.left =
+    `${x + radiusPx * .40}px`;
+
+  introDragMini.style.top =
+    `${y - radiusPx * .45}px`;
+
+  showIntroDragMini();
+
+  if (t >= 1) {
+    stopIntroDragCue();
+  }
+}
+
+function showIntroDragMini() {
+  introDragMini?.classList.add('is-visible');
+}
+
+function hideIntroDragMini() {
+  introDragMini?.classList.remove('is-visible');
+}
 
 // ========================================
 // 14. RAYCASTING
@@ -1129,6 +1319,7 @@ function removeRed(piece, dx, dy) {
   piece.velocity.y += .6;
 
   piece.spin = between(-3.8, 3.8);
+  void playSfx('drop');
 }
 
 
@@ -1305,6 +1496,7 @@ function startReveal(
   setGuide(GUIDE.peel);
 
   showWipe();
+  void playSfx('found');
 
   introPieces.forEach(p => {
 
@@ -1353,9 +1545,49 @@ function finishIntro() {
   if (book) book.hidden = false;
 
   renderBook();
-  startPeelCue();
+
+  // 회전 안내 먼저
+  showRotateHint();
+
+  // 회전 안내가 사라진 뒤 스티커 힌트
+  setTimeout(startPeelCue, 1200);
 }
 
+// ========================================
+// ROTATION GUIDE
+// ========================================
+
+let rotateHintStartTimer = 0;
+let rotateHintEndTimer = 0;
+
+function showRotateHint() {
+
+  clearTimeout(rotateHintStartTimer);
+  clearTimeout(rotateHintEndTimer);
+
+  rotateHintStartTimer = setTimeout(() => {
+
+    if (
+      introState !== 'finished' ||
+      appleTouched ||
+      !popup.hidden
+    ) return;
+
+    rotateHint.hidden = false;
+
+    rotateHintEndTimer = setTimeout(() => {
+      rotateHint.hidden = true;
+    }, 1800);
+
+  }, 500);
+}
+
+function hideRotateHint() {
+  clearTimeout(rotateHintStartTimer);
+  clearTimeout(rotateHintEndTimer);
+
+  rotateHint.hidden = true;
+}
 
 // ========================================
 // 17. FIND STICKER
@@ -1591,6 +1823,8 @@ canvas.addEventListener(
       const piece = pickRed(e);
 
       if (!piece) return;
+      
+      stopIntroDragCue();
 
       e.preventDefault();
 
@@ -1613,6 +1847,8 @@ canvas.addEventListener(
     // MAIN APPLE
 
     if (introState !== 'finished') return;
+
+    hideRotateHint();
 
     e.preventDefault();
 
@@ -1798,7 +2034,7 @@ function onRelease(e) {
       s.fallAt = performance.now();
 
       renderBook();
-      playPeelSound();
+      void playSfx('peel');
       startPreview(p.index);
 
       clearTimeout(popupTimer);
@@ -1870,76 +2106,283 @@ canvas.addEventListener(
 );
 
 
-// ========================================
-// 22. PEEL SOUND
-// ========================================
 
-let sfxContext;
 
-function playPeelSound() {
+ // ========================================
+ // 22. SOUND EFFECTS
+ // ========================================
 
-  try {
+ const SFX = {
 
-    sfxContext ??= new (
-      window.AudioContext ||
-      window.webkitAudioContext
-    )();
+   drop: {
+     url: './assets/sfx/apple-drop.wav',
+     offset: 0,
+     duration: 1.1,
+     volume: 1.15
+   },
 
-    if (sfxContext.state === 'suspended') {
-      sfxContext.resume();
-    }
+   found: {
+     url: './assets/sfx/apple-found.mp3',
+     offset: 0,
+     duration: 0.72,
+     volume: 1.6
+   },
 
-    const duration = .29;
+   peel: {
+     url: './assets/sfx/sticker-peel.mp3',
+     offset: 1.0,
+     duration: 0.8,
+     volume: 0.14
+   },
 
-    const count = Math.floor(
-      sfxContext.sampleRate * duration
-    );
+   stick: {
+     url: './assets/sfx/sticker-stick.wav',
+     offset: 0,
+     duration: 0.35,
+     volume: 0.38
+   },
 
-    const buffer = sfxContext.createBuffer(
-      1,
-      count,
-      sfxContext.sampleRate
-    );
+   camera: {
+     url: './assets/sfx/camera-click.wav',
+     offset: 0,
+     duration: 1.0,
+     volume: 0.18
+   }
 
-    const a = buffer.getChannelData(0);
+ };
 
-    for (let i = 0; i < count; i++) {
-      a[i] =
-        (Math.random() * 2 - 1) *
-        (1 - i / count);
-    }
 
-    const source =
-      sfxContext.createBufferSource();
+ let sfxContext = null;
+ let sfxMasterGain = null;
 
-    const filter =
-      sfxContext.createBiquadFilter();
+ const sfxBuffers = new Map();
+ const sfxLoading = new Map();
 
-    const gain =
-      sfxContext.createGain();
 
-    source.buffer = buffer;
+ // AUDIO CONTEXT
 
-    filter.type = 'bandpass';
-    filter.frequency.value = 850;
+ function getSfxContext() {
 
-    gain.gain.value = .025;
+   if (sfxContext) return sfxContext;
 
-    source
-      .connect(filter)
-      .connect(gain)
-      .connect(sfxContext.destination);
+   const Context =
+     window.AudioContext ||
+     window.webkitAudioContext;
 
-    source.start();
+   if (!Context) return null;
 
-    source.stop(
-      sfxContext.currentTime + duration
-    );
+   sfxContext = new Context();
 
-  } catch (err) {
-    console.warn('Peel sound:', err);
-  }
-}
+   sfxMasterGain = sfxContext.createGain();
+
+   sfxMasterGain.gain.value =
+     soundEnabled ? 1 : 0;
+
+   sfxMasterGain.connect(
+     sfxContext.destination
+   );
+
+   return sfxContext;
+ }
+
+
+ // LOAD AND DECODE AUDIO
+
+ function loadSfxBuffer(name) {
+
+   if (!SFX[name]) {
+     return Promise.reject(
+       new Error(`Unknown SFX: ${name}`)
+     );
+   }
+
+   if (sfxBuffers.has(name)) {
+     return Promise.resolve(
+       sfxBuffers.get(name)
+     );
+   }
+
+   if (sfxLoading.has(name)) {
+     return sfxLoading.get(name);
+   }
+
+   const ctx = getSfxContext();
+
+   if (!ctx) {
+     return Promise.reject(
+       new Error('Web Audio API unsupported')
+     );
+   }
+
+   const pending = (async () => {
+
+     const response = await fetch(
+       SFX[name].url
+     );
+
+     if (!response.ok) {
+       throw new Error(
+         `${name}: HTTP ${response.status}`
+       );
+     }
+
+     const encoded =
+       await response.arrayBuffer();
+
+     const buffer =
+       await ctx.decodeAudioData(encoded);
+
+     sfxBuffers.set(name, buffer);
+
+     return buffer;
+
+   })();
+
+   sfxLoading.set(name, pending);
+
+   pending.catch(() => {
+     sfxLoading.delete(name);
+   });
+
+   return pending;
+ }
+
+
+ // SOUND ON / OFF
+
+ function syncSfxEnabled() {
+
+   if (!soundEnabled && !sfxContext) {
+     return;
+   }
+
+   const ctx = getSfxContext();
+
+   if (!ctx) return;
+
+   sfxMasterGain.gain.setValueAtTime(
+     soundEnabled ? 1 : 0,
+     ctx.currentTime
+   );
+
+   if (soundEnabled) {
+
+     void ctx.resume().catch(console.warn);
+
+     // Sound on을 누르면 효과음 미리 로드
+     for (const name of Object.keys(SFX)) {
+
+       void loadSfxBuffer(name).catch(error => {
+         console.warn(
+           'SFX preload failed:',
+           error
+         );
+       });
+
+     }
+   }
+ }
+
+
+ // PLAY SOUND EFFECT
+
+ async function playSfx(name) {
+
+   if (!soundEnabled || !SFX[name]) {
+     return;
+   }
+
+   const config = SFX[name];
+
+   const ctx = getSfxContext();
+
+   if (!ctx) return;
+
+   try {
+
+     const buffer =
+       await loadSfxBuffer(name);
+
+     if (!soundEnabled) return;
+
+     if (ctx.state !== 'running') {
+       await ctx.resume();
+     }
+
+     // 재생 시작점
+     const offset = Math.min(
+       Math.max(0, config.offset),
+       Math.max(0, buffer.duration - .01)
+     );
+
+     // 재생 길이
+     const duration = Math.min(
+       config.duration,
+       buffer.duration - offset
+     );
+
+     if (duration <= 0) return;
+
+
+     const source =
+       ctx.createBufferSource();
+
+     const gain =
+       ctx.createGain();
+
+     source.buffer = buffer;
+
+     source.connect(gain);
+     gain.connect(sfxMasterGain);
+
+
+     const now = ctx.currentTime;
+
+     // 앞뒤 아주 짧은 페이드
+     const fade = Math.min(
+       .02,
+       duration / 4
+     );
+
+     gain.gain.setValueAtTime(0, now);
+
+     gain.gain.linearRampToValueAtTime(
+       config.volume,
+       now + fade
+     );
+
+     gain.gain.setValueAtTime(
+       config.volume,
+       now + duration - fade
+     );
+
+     gain.gain.linearRampToValueAtTime(
+       0,
+       now + duration
+     );
+
+
+     // 지정한 구간만 재생
+     source.start(
+       now,
+       offset,
+       duration
+     );
+
+     source.onended = () => {
+       source.disconnect();
+       gain.disconnect();
+     };
+
+   } catch (error) {
+
+     console.warn(
+       `Failed to play ${name}:`,
+       error
+     );
+
+   }
+ }
 
 
 // ========================================
@@ -2032,10 +2475,10 @@ function openPopup(index) {
 
   const fields = [
     ['composed', 'composed by'],
-    ['arranged', 'arranged by'],
-    ['mastered', 'mastered by'],
     ['lyrics', 'lyrics by'],
-    ['mixed', 'mixed by']
+    ['arranged', 'arranged by'],
+    ['mixed', 'mixed by'],
+    ['mastered', 'mastered by']
   ];
 
   for (const [key, label] of fields) {
@@ -2308,39 +2751,77 @@ function appleHit(x, y) {
 // 29. CREATE STICKER COPY
 // ========================================
 
+
+function getOriginalStickerSize(index) {
+
+  const geometry = stickers[index].homeGeometry;
+  const pos = geometry.attributes.position;
+
+  // 원본 스티커의 표면 격자 크기
+  const side = Math.round(Math.sqrt(pos.count));
+  const middle = Math.floor(side / 2);
+
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+
+  let width = 0;
+  let height = 0;
+
+  // 원본 스티커의 가로 표면 길이
+  for (let i = 1; i < side; i++) {
+
+    a.fromBufferAttribute(
+      pos,
+      middle * side + i - 1
+    );
+
+    b.fromBufferAttribute(
+      pos,
+      middle * side + i
+    );
+
+    width += a.distanceTo(b);
+  }
+
+  // 원본 스티커의 세로 표면 길이
+  for (let j = 1; j < side; j++) {
+
+    a.fromBufferAttribute(
+      pos,
+      (j - 1) * side + middle
+    );
+
+    b.fromBufferAttribute(
+      pos,
+      j * side + middle
+    );
+
+    height += a.distanceTo(b);
+  }
+
+  return { width, height };
+}
+
+
 function makeStamp(index) {
 
-  const map =
-    stickers[index].mesh.material.map;
-
-  const aspect =
-    map.image?.width &&
-    map.image?.height
-      ? map.image.width / map.image.height
-      : 1;
-
-  const width =
-    aspect >= 1
-      ? .78
-      : .78 * aspect;
-
-  const height =
-    aspect >= 1
-      ? .78 / aspect
-      : .78;
+  // 원본 스티커와 동일한 표면 크기 사용
+  const { width, height } =
+    getOriginalStickerSize(index);
 
   const geometry = new THREE.PlaneGeometry(
-    width, height
+    width,
+    height
   );
 
-  const material = new THREE.MeshBasicMaterial({
-    map,
-    transparent: true,
-    alphaTest: .04,
-    opacity: .78,
-    depthWrite: false,
-    side: THREE.DoubleSide
-  });
+  // 원본과 동일한 텍스처, 색감, 재질 사용
+  const material =
+    stickers[index].mesh.material.clone();
+
+  // 드래그 중에는 살짝 투명하게
+  material.transparent = true;
+  material.opacity = .78;
+  material.depthWrite = false;
 
   const mesh = new THREE.Mesh(
     geometry,
@@ -2354,6 +2835,7 @@ function makeStamp(index) {
 
   return mesh;
 }
+
 
 
 // ========================================
@@ -2835,494 +3317,667 @@ resetBtn.addEventListener('click', () => {
 });
 
 
-// ========================================
-// 37. SHARE CUSTOM APPLE PNG
-// ========================================
 
+ // ========================================
+ // 37. SHARE CUSTOM APPLE PNG
+ // ========================================
 
-// ========================================
-// POLAROID STORY SHARE
-// 1080 × 1920
-// ========================================
+ // 공유용 이미지
+ const shareFrame = new Image();
+ shareFrame.src = './assets/frame.png';
 
-// 프레임 미리 불러오기
-const shareFrame = new Image();
-shareFrame.src = './assets/frame.png';
+ const shareBgPhoto = new Image();
+ shareBgPhoto.src = './assets/cover-photo.png';
 
-async function shareApple() {
+ const shareTitleArt = new Image();
+ shareTitleArt.src = './assets/greenapple-title.png';
 
-  if (!allCollected()) return;
+ const sharePolaroidTexture = new Image();
+ sharePolaroidTexture.src = './assets/polaroid-texture.jpg';
 
-  if (
-    !shareFrame.complete ||
-    !shareFrame.naturalWidth
-  ) {
-    alert('assets/frame.png 파일을 확인해 주세요.');
-    return;
-  }
-
-  shareBtn.disabled = true;
-
-  const renderWidth = 840;
-  const renderHeight = 860;
-
-  let target = null;
-  let applePhoto = null;
-
-  const previousTarget = renderer.getRenderTarget();
-  const previousIntro = introGroup.visible;
-  const previousPaint = paint?.visible;
 
-  const previousColor = renderer
-    .getClearColor(new THREE.Color())
-    .clone();
-
-  const previousAlpha = renderer.getClearAlpha();
+ async function shareApple() {
 
-  try {
+   if (!allCollected()) return;
 
-    // ====================================
-    // 1. 3D APPLE PHOTOGRAPH
-    // ====================================
+   const images = [
+     shareFrame,
+     shareBgPhoto,
+     shareTitleArt,
+     sharePolaroidTexture
+   ];
 
-    target = new THREE.WebGLRenderTarget(
-      renderWidth,
-      renderHeight,
-      {
-        format: THREE.RGBAFormat,
-        type: THREE.UnsignedByteType,
-        depthBuffer: true,
-        stencilBuffer: false
-      }
-    );
+   if (
+     images.some(img =>
+       !img.complete || !img.naturalWidth
+     )
+   ) {
+     alert('공유용 이미지 assets 경로를 확인해 주세요.');
+     return;
+   }
+   void playSfx('camera');
 
-    const exportCamera = camera.clone();
+   shareBtn.disabled = true;
 
-    exportCamera.aspect =
-      renderWidth / renderHeight;
+   try {
 
-    exportCamera.position.set(0, 0, 4.2);
-    exportCamera.lookAt(0, 0, 0);
-    exportCamera.updateProjectionMatrix();
+     // ====================================
+     // 1. 3D APPLE CAPTURE
+     // ====================================
 
-    introGroup.visible = false;
+     const renderWidth = 840;
+     const renderHeight = 860;
 
-    if (paint) {
-      paint.visible = false;
-    }
+     let applePhoto;
+     let target = null;
 
-    renderer.setRenderTarget(target);
-    renderer.setClearColor(0xffffff, 0);
-    renderer.clear(true, true, true);
+     const previousTarget =
+       renderer.getRenderTarget();
 
-    renderer.render(scene, exportCamera);
+     const previousIntro = introGroup.visible;
+     const previousPaint = paint?.visible;
 
-    // WebGL 픽셀 추출
-    const pixels = new Uint8Array(
-      renderWidth * renderHeight * 4
-    );
+     const previousColor = renderer
+       .getClearColor(new THREE.Color())
+       .clone();
 
-    renderer.readRenderTargetPixels(
-      target,
-      0,
-      0,
-      renderWidth,
-      renderHeight,
-      pixels
-    );
+     const previousAlpha =
+       renderer.getClearAlpha();
 
-    // WebGL은 Y축이 반대이므로 뒤집기
-    const flipped = new Uint8ClampedArray(
-      pixels.length
-    );
 
-    const rowSize = renderWidth * 4;
+     try {
 
-    for (let y = 0; y < renderHeight; y++) {
-      const from =
-        (renderHeight - 1 - y) * rowSize;
+       target = new THREE.WebGLRenderTarget(
+         renderWidth,
+         renderHeight,
+         {
+           format: THREE.RGBAFormat,
+           type: THREE.UnsignedByteType,
+           depthBuffer: true,
+           stencilBuffer: false
+         }
+       );
 
-      flipped.set(
-        pixels.subarray(from, from + rowSize),
-        y * rowSize
-      );
-    }
+       target.texture.colorSpace =
+         THREE.SRGBColorSpace;
 
-    applePhoto = document.createElement('canvas');
-    applePhoto.width = renderWidth;
-    applePhoto.height = renderHeight;
+       const exportCamera = camera.clone();
 
-    applePhoto.getContext('2d').putImageData(
-      new ImageData(
-        flipped,
-        renderWidth,
-        renderHeight
-      ),
-      0,
-      0
-    );
+       exportCamera.aspect =
+         renderWidth / renderHeight;
 
-  } catch (error) {
+       exportCamera.position.set(0, 0, 4.0);
+       exportCamera.lookAt(0, 0, 0);
+       exportCamera.updateProjectionMatrix();
 
-    console.error('Apple render error:', error);
-    alert('사과 이미지를 생성하지 못했어요.');
-    return;
+       introGroup.visible = false;
 
-  } finally {
+       if (paint) {
+         paint.visible = false;
+       }
 
-    renderer.setRenderTarget(previousTarget);
+       renderer.setRenderTarget(target);
+       renderer.setClearColor(0xffffff, 0);
+       renderer.clear(true, true, true);
 
-    renderer.setClearColor(
-      previousColor,
-      previousAlpha
-    );
+       renderer.render(scene, exportCamera);
 
-    introGroup.visible = previousIntro;
 
-    if (paint) {
-      paint.visible = previousPaint;
-    }
+       // WebGL 픽셀 추출
+       const pixels = new Uint8Array(
+         renderWidth * renderHeight * 4
+       );
 
-    target?.dispose();
-    shareBtn.disabled = false;
-  }
+       renderer.readRenderTargetPixels(
+         target,
+         0,
+         0,
+         renderWidth,
+         renderHeight,
+         pixels
+       );
 
 
-  // ====================================
-  // 2. INSTAGRAM STORY CANVAS
-  // ====================================
+       // WebGL Y축 뒤집기
+       const flipped =
+         new Uint8ClampedArray(pixels.length);
 
-  const story = document.createElement('canvas');
+       const rowSize = renderWidth * 4;
 
-  story.width = 1080;
-  story.height = 1920;
+       for (let y = 0; y < renderHeight; y++) {
 
-  const ctx = story.getContext('2d');
+         const from =
+           (renderHeight - 1 - y) * rowSize;
 
-  // 따뜻한 빈티지 종이 배경
-  ctx.fillStyle = '#eee5d2';
-  ctx.fillRect(0, 0, 1080, 1920);
+         flipped.set(
+           pixels.subarray(from, from + rowSize),
+           y * rowSize
+         );
+       }
 
-  // 배경 미세한 인쇄 질감
-  for (let i = 0; i < 13000; i++) {
 
-    const x = Math.random() * 1080;
-    const y = Math.random() * 1920;
+       applePhoto = document.createElement('canvas');
 
-    ctx.fillStyle = Math.random() > .5
-      ? 'rgba(85,67,40,.045)'
-      : 'rgba(255,255,255,.10)';
+       applePhoto.width = renderWidth;
+       applePhoto.height = renderHeight;
 
-    ctx.fillRect(x, y, 1.5, 1.5);
-  }
+       applePhoto.getContext('2d').putImageData(
+         new ImageData(
+           flipped,
+           renderWidth,
+           renderHeight
+         ),
+         0,
+         0
+       );
 
+     } finally {
 
-  // ====================================
-  // 3. FRAME POSITION
-  // ====================================
+       // 렌더러 원래 상태 복원
+       renderer.setRenderTarget(previousTarget);
 
-  const frameWidth = 940;
+       renderer.setClearColor(
+         previousColor,
+         previousAlpha
+       );
 
-  const frameHeight =
-    frameWidth *
-    shareFrame.naturalHeight /
-    shareFrame.naturalWidth;
+       introGroup.visible = previousIntro;
 
-  const frameX = (1080 - frameWidth) / 2;
-  const frameY = (1920 - frameHeight) / 2;
+       if (paint) {
+         paint.visible = previousPaint;
+       }
 
-  // frame.png의 실제 투명 사진 영역
-  // 원본 크기: 548 × 640px
+       target?.dispose();
+     }
 
-  const photoX =
-    frameX + frameWidth * (67 / 548);
 
-  const photoY =
-    frameY + frameHeight * (61 / 640);
+     // ====================================
+     // 2. STORY CANVAS
+     // ====================================
 
-  const photoW =
-    frameWidth * (419 / 548);
+     const W = 1080;
+     const H = 1920;
 
-  const photoH =
-    frameHeight * (433 / 640);
+     const story = document.createElement('canvas');
 
+     story.width = W;
+     story.height = H;
 
-  // ====================================
-  // 4. POLAROID PHOTO COLOR
-  // ====================================
+     const ctx = story.getContext('2d');
 
-  ctx.save();
+     // 기본 배경색
+     ctx.fillStyle = '#f2ead9';
+     ctx.fillRect(0, 0, W, H);
 
-  ctx.beginPath();
-  ctx.rect(
-    photoX,
-    photoY,
-    photoW,
-    photoH
-  );
-  ctx.clip();
 
-  // 햇빛을 받은 노란 필름 배경
-  const filmBackground = ctx.createLinearGradient(
-    photoX,
-    photoY,
-    photoX + photoW,
-    photoY + photoH
-  );
+     // ====================================
+     // 3. POLAROID SIZE
+     // ====================================
 
-  filmBackground.addColorStop(0, '#e8dba6');
-  filmBackground.addColorStop(.48, '#d5c899');
-  filmBackground.addColorStop(1, '#b4aa80');
+     // 중앙 폴라로이드 크기
+     const frameWidth = 860;
 
-  ctx.fillStyle = filmBackground;
-  ctx.fillRect(
-    photoX,
-    photoY,
-    photoW,
-    photoH
-  );
+     const frameHeight =
+       frameWidth *
+       shareFrame.naturalHeight /
+       shareFrame.naturalWidth;
 
+     const frameX =
+       (W - frameWidth) / 2;
 
-  // ====================================
-  // 5. SOFT FILM APPLE
-  // ====================================
+     const frameY =
+       (H - frameHeight) / 2;
 
-  // 빛이 부드럽게 번지는 효과
-  ctx.save();
 
-  ctx.globalAlpha = .15;
-  ctx.filter = 'blur(8px)';
+     // 배경 폴라로이드도 동일한 너비
+     const coverWidth = frameWidth;
 
-  ctx.drawImage(
-    applePhoto,
-    photoX,
-    photoY,
-    photoW,
-    photoH
-  );
+     const coverHeight =
+       coverWidth *
+       shareBgPhoto.naturalHeight /
+       shareBgPhoto.naturalWidth;
 
-  ctx.restore();
 
+     // ====================================
+     // 4. BACKGROUND POLAROID COLLAGE
+     // ====================================
 
-  // 실제 사과 이미지
-  ctx.save();
+     // 매번 동일한 랜덤 배치
+     let scatterSeed = 31971;
 
-  ctx.filter = [
-    'sepia(10%)',
-    'saturate(90%)',
-    'contrast(94%)',
-    'brightness(105%)',
-    'blur(0.35px)'
-  ].join(' ');
+     const rnd = () => {
 
-  ctx.drawImage(
-    applePhoto,
-    photoX,
-    photoY,
-    photoW,
-    photoH
-  );
+       scatterSeed = (
+         Math.imul(scatterSeed, 1664525)
+         + 1013904223
+       ) >>> 0;
 
-  ctx.restore();
+       return scatterSeed / 4294967296;
+     };
 
 
-  // 필름 특유의 노란 색 번짐
-  ctx.fillStyle = 'rgba(237,202,118,.075)';
+     const positions = [
+       [-120, -120],
+       [680, -100],
+       [1200, 170],
 
-  ctx.fillRect(
-    photoX,
-    photoY,
-    photoW,
-    photoH
-  );
+       [-360, 300],
+       [250, 230],
+       [940, 370],
 
+       [-80, 670],
+       [620, 710],
+       [1230, 770],
 
-  // 촉촉한 필름의 확산광
-  const glow = ctx.createRadialGradient(
-    photoX + photoW * .32,
-    photoY + photoH * .22,
-    15,
-    photoX + photoW * .32,
-    photoY + photoH * .22,
-    photoW * .8
-  );
+       [-350, 1040],
+       [280, 1070],
+       [980, 1140],
 
-  glow.addColorStop(
-    0,
-    'rgba(255,247,209,.17)'
-  );
+       [-130, 1440],
+       [530, 1380],
+       [1230, 1520],
 
-  glow.addColorStop(
-    1,
-    'rgba(255,247,209,0)'
-  );
+       [-340, 1740],
+       [260, 1790],
+       [950, 1850],
 
-  ctx.fillStyle = glow;
+       [-100, 2120],
+       [710, 2100]
+     ];
 
-  ctx.fillRect(
-    photoX,
-    photoY,
-    photoW,
-    photoH
-  );
 
+     // 배경 앨범 커버 20장
+     for (const [baseX, baseY] of positions) {
 
-  // 자연스러운 필름 비네팅
-  const vignette = ctx.createRadialGradient(
-    photoX + photoW / 2,
-    photoY + photoH / 2,
-    photoW * .12,
-    photoX + photoW / 2,
-    photoY + photoH / 2,
-    photoW * .78
-  );
+       const x =
+         baseX + (rnd() - .5) * 240;
 
-  vignette.addColorStop(
-    0,
-    'rgba(65,45,23,0)'
-  );
+       const y =
+         baseY + (rnd() - .5) * 220;
 
-  vignette.addColorStop(
-    1,
-    'rgba(65,45,23,.22)'
-  );
+       const angle =
+         (rnd() - .5) * Math.PI * .34;
 
-  ctx.fillStyle = vignette;
 
-  ctx.fillRect(
-    photoX,
-    photoY,
-    photoW,
-    photoH
-  );
+       ctx.save();
 
+       ctx.translate(x, y);
+       ctx.rotate(angle);
 
-  // 필름 그레인
-  for (let i = 0; i < 9000; i++) {
+       ctx.globalAlpha = .95;
 
-    const x = photoX + Math.random() * photoW;
-    const y = photoY + Math.random() * photoH;
+       ctx.drawImage(
+         shareBgPhoto,
+         -coverWidth / 2,
+         -coverHeight / 2,
+         coverWidth,
+         coverHeight
+       );
 
-    ctx.fillStyle = Math.random() > .5
-      ? 'rgba(37,29,18,.10)'
-      : 'rgba(255,248,216,.16)';
+       // 중요: 매번 회전/이동 복원
+       ctx.restore();
+     }
 
-    ctx.fillRect(x, y, 1.2, 1.2);
-  }
 
-  // 미세한 스캔 라인
-  ctx.strokeStyle = 'rgba(75,56,34,.035)';
-  ctx.lineWidth = 1;
+     // ====================================
+     // 5. TRACING PAPER BACKGROUND
+     // ====================================
 
-  for (
-    let y = photoY + 4;
-    y < photoY + photoH;
-    y += 6
-  ) {
+     // 배경 앨범 커버에만 적용
+     ctx.fillStyle =
+       'rgba(247, 240, 221, .46)';
 
-    ctx.beginPath();
-    ctx.moveTo(photoX, y);
-    ctx.lineTo(photoX + photoW, y);
-    ctx.stroke();
-  }
+     ctx.fillRect(0, 0, W, H);
 
-  ctx.restore();
 
+     // 아주 약한 빈티지 종이 질감
+     for (let i = 0; i < 6500; i++) {
 
-  // ====================================
-  // 6. POLAROID FRAME OVERLAY
-  // ====================================
+       ctx.fillStyle = rnd() > .5
+         ? 'rgba(97,77,56,.035)'
+         : 'rgba(255,255,255,.075)';
 
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
+       ctx.fillRect(
+         rnd() * W,
+         rnd() * H,
+         1,
+         1
+       );
+     }
 
-  ctx.drawImage(
-    shareFrame,
-    frameX,
-    frameY,
-    frameWidth,
-    frameHeight
-  );
 
+     // ====================================
+     // 6. CENTER APPLE PHOTO
+     // ====================================
 
-  // ====================================
-  // 7. CREATE PNG
-  // ====================================
+     // frame.png 원본 548×640 기준
+     const photoX =
+       frameX + frameWidth * (67 / 548);
 
-  const dataURL = story.toDataURL('image/png');
+     const photoY =
+       frameY + frameHeight * (61 / 640);
 
-  const binary = atob(dataURL.split(',')[1]);
+     const photoW =
+       frameWidth * (419 / 548);
 
-  const bytes = new Uint8Array(binary.length);
+     const photoH =
+       frameHeight * (433 / 640);
 
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
 
-  const blob = new Blob(
-    [bytes],
-    { type: 'image/png' }
-  );
+     ctx.save();
 
-  const file = new File(
-    [blob],
-    'my-green-apple-polaroid.png',
-    { type: 'image/png' }
-  );
+     ctx.beginPath();
 
+     ctx.rect(
+       photoX,
+       photoY,
+       photoW,
+       photoH
+     );
 
-  // ====================================
-  // 8. MOBILE SHARE
-  // ====================================
+     ctx.clip();
 
-  if (
-    navigator.share &&
-    navigator.canShare?.({ files: [file] })
-  ) {
 
-    try {
+     // 사진 안쪽 배경
+     ctx.fillStyle = '#f2ead9';
 
-      await navigator.share({
-        files: [file],
-        title: 'GREEN APPLE'
-      });
+     ctx.fillRect(
+       photoX,
+       photoY,
+       photoW,
+       photoH
+     );
 
-      return;
 
-    } catch (error) {
+     // 웹 화면과 같은 CSS 색감
+     const screenFilter =
+       getComputedStyle(canvas).filter;
 
-      if (error.name === 'AbortError') {
-        return;
-      }
-    }
-  }
+     ctx.filter =
+       screenFilter && screenFilter !== 'none'
+         ? screenFilter
+         : 'none';
 
+     ctx.imageSmoothingEnabled = true;
+     ctx.imageSmoothingQuality = 'high';
 
-  // ====================================
-  // 9. DOWNLOAD FALLBACK
-  // ====================================
 
-  const url = URL.createObjectURL(blob);
+     // 청사과 렌더링
+     ctx.drawImage(
+       applePhoto,
+       photoX,
+       photoY,
+       photoW,
+       photoH
+     );
 
-  const link = document.createElement('a');
+     ctx.filter = 'none';
 
-  link.href = url;
-  link.download = file.name;
 
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+     // ====================================
+     // 6.5 APPLE PHOTO TEXTURE
+     // ====================================
 
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 1500);
-}
+     // 프레임이 아닌 사진 내부에만 질감 적용
+     ctx.save();
 
+     ctx.globalAlpha = .08;
+     ctx.globalCompositeOperation = 'multiply';
 
-shareBtn.addEventListener(
-  'click',
-  shareApple
-);
+     ctx.drawImage(
+       sharePolaroidTexture,
+       photoX,
+       photoY,
+       photoW,
+       photoH
+     );
+
+     ctx.restore();
+
+     // 사진 클리핑 완전히 종료
+     ctx.restore();
+
+
+     // ====================================
+     // 7. ORIGINAL POLAROID FRAME
+     // ====================================
+
+     ctx.save();
+
+     ctx.shadowColor =
+       'rgba(48,35,24,.26)';
+
+     ctx.shadowBlur = 25;
+     ctx.shadowOffsetY = 13;
+
+     ctx.drawImage(
+       shareFrame,
+       frameX,
+       frameY,
+       frameWidth,
+       frameHeight
+     );
+
+     ctx.restore();
+
+
+     // ====================================
+     // 8. GREEN APPLE TYPOGRAPHY
+     // ====================================
+
+     const footerTop =
+       frameY + frameHeight * (507 / 640);
+
+     const footerHeight =
+       frameHeight * (112 / 640);
+
+
+     // PNG 투명 여백 제외
+     const tempCanvas =
+       document.createElement('canvas');
+
+     tempCanvas.width =
+       shareTitleArt.naturalWidth;
+
+     tempCanvas.height =
+       shareTitleArt.naturalHeight;
+
+     const tempCtx = tempCanvas.getContext(
+       '2d',
+       { willReadFrequently: true }
+     );
+
+     tempCtx.drawImage(
+       shareTitleArt,
+       0,
+       0
+     );
+
+     const data = tempCtx.getImageData(
+       0,
+       0,
+       tempCanvas.width,
+       tempCanvas.height
+     ).data;
+
+
+     let minX = tempCanvas.width;
+     let minY = tempCanvas.height;
+     let maxX = -1;
+     let maxY = -1;
+
+
+     for (let y = 0; y < tempCanvas.height; y++) {
+
+       for (let x = 0; x < tempCanvas.width; x++) {
+
+         const alpha =
+           data[(y * tempCanvas.width + x) * 4 + 3];
+
+         if (alpha <= 20) continue;
+
+         minX = Math.min(minX, x);
+         minY = Math.min(minY, y);
+         maxX = Math.max(maxX, x);
+         maxY = Math.max(maxY, y);
+       }
+     }
+
+
+     const hasContent =
+       maxX >= minX && maxY >= minY;
+
+     const sourceX =
+       hasContent ? minX : 0;
+
+     const sourceY =
+       hasContent ? minY : 0;
+
+     const sourceW = hasContent
+       ? maxX - minX + 1
+       : tempCanvas.width;
+
+     const sourceH = hasContent
+       ? maxY - minY + 1
+       : tempCanvas.height;
+
+
+     // 타이포 크기와 위치 조절
+     const maxW = frameWidth * .70;
+     const maxH = footerHeight * .62;
+
+     const titleOffsetX = 0;
+     const titleOffsetY = -20;
+
+
+     const titleScale = Math.min(
+       maxW / sourceW,
+       maxH / sourceH
+     );
+
+     const titleW =
+       sourceW * titleScale;
+
+     const titleH =
+       sourceH * titleScale;
+
+
+     ctx.save();
+
+     ctx.globalAlpha = .94;
+
+     ctx.drawImage(
+       shareTitleArt,
+
+       sourceX,
+       sourceY,
+       sourceW,
+       sourceH,
+
+       frameX + (frameWidth - titleW) / 2
+         + titleOffsetX,
+
+       footerTop + (footerHeight - titleH) / 2
+         + titleOffsetY,
+
+       titleW,
+       titleH
+     );
+
+     ctx.restore();
+
+
+     // ====================================
+     // 9. CREATE PNG
+     // ====================================
+
+     const blob = await new Promise(resolve =>
+       story.toBlob(resolve, 'image/png')
+     );
+
+     if (!blob) {
+       throw new Error('PNG 생성 실패');
+     }
+
+     const file = new File(
+       [blob],
+       'my-green-apple-polaroid.png',
+       { type: 'image/png' }
+     );
+
+
+     // ====================================
+     // 10. MOBILE SHARE
+     // ====================================
+
+     if (
+       navigator.share &&
+       navigator.canShare?.({ files: [file] })
+     ) {
+
+       try {
+
+         await navigator.share({
+           files: [file],
+           title: 'GREEN APPLE'
+         });
+
+         return;
+
+       } catch (error) {
+
+         if (error.name === 'AbortError') {
+           return;
+         }
+
+         console.warn(
+           'Mobile share failed:',
+           error
+         );
+       }
+     }
+
+
+     // ====================================
+     // 11. DOWNLOAD FALLBACK
+     // ====================================
+
+     const url = URL.createObjectURL(blob);
+
+     const link = document.createElement('a');
+
+     link.href = url;
+     link.download = file.name;
+
+     document.body.appendChild(link);
+     link.click();
+     link.remove();
+
+     setTimeout(() => {
+       URL.revokeObjectURL(url);
+     }, 1500);
+
+
+   } catch (error) {
+
+     console.error('Share image error:', error);
+
+     alert(
+       '공유 이미지를 생성하지 못했어요. 콘솔을 확인해 주세요.'
+     );
+
+   } finally {
+
+     shareBtn.disabled = false;
+   }
+ }
+
+
+ shareBtn.addEventListener(
+   'click',
+   shareApple
+ );
+
 
 
 // ========================================
@@ -3416,6 +4071,9 @@ function animate(now) {
   );
 
   lastFrame = now;
+
+  // INTRO DRAG GUIDE
+  updateIntroDragCue(now);
 
 
   // RED APPLES FALL

@@ -81,12 +81,31 @@
         aria-label="사과를 드래그해 청사과를 찾고 스티커를 떼어보세요"
       ></canvas>
 
+      <p
+        id="intro-drag-mini"
+        class="intro-drag-mini"
+        aria-hidden="true"
+      >
+        ← DRAG →
+      </p>
+
       <p id="fallback" class="fallback" hidden>
         3D 모델을 불러오지 못했습니다.
         GLB 경로를 확인해 주세요.
       </p>
 
     </section>
+
+    <!-- ROTATION GUIDE -->
+    <div
+      id="rotate-hint"
+      class="rotate-hint"
+      role="status"
+      aria-live="polite"
+      hidden
+    >
+      ↻ Spin the apple 360°
+    </div>
 
 
     <!-- GUIDE MESSAGE -->
@@ -98,7 +117,7 @@
     >
       <div class="intro-note-paper">
         <p class="intro-note-text">
-          Drag the apples to find the green apple
+          Take away the apples to find the Green Apple
         </p>
       </div>
     </div>
@@ -254,26 +273,90 @@
     <div class="paint-swipe swipe-3"></div>
   </div>
 
+  
   <!-- FIRST VISIT SOUND GUIDE -->
-  <div id="sound-intro" class="sound-intro"
-      role="dialog" aria-modal="true"
-      aria-labelledby="sound-title">
-
+  <div
+    id="sound-intro"
+    class="sound-intro"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="sound-title"
+  >
     <div class="sound-paper">
-      <p id="sound-title">Better with sound</p>
+
+      <p id="sound-title">
+        Better with sound
+      </p>
 
       <div class="sound-actions">
-        <button id="sound-on" type="button">Sound on ↗</button>
-        <button id="sound-off" type="button">Not now</button>
+
+        <button
+          id="sound-on"
+          type="button"
+          aria-label="Enable sound"
+        >
+          <span>Sound on</span>
+
+          <svg
+            class="volume-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M11 5 6 9H3v6h3l5 4V5Z"/>
+            <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+            <path d="M19 5a10 10 0 0 1 0 14"/>
+          </svg>
+
+        </button>
+
       </div>
+
     </div>
   </div>
+
 
   <!-- SOUND TOGGLE -->
   <button id="sound-toggle" type="button"
           aria-label="Toggle sound" hidden>
     ♫
   </button>
+
+
+  
+  
+  <!-- LOADING SCREEN -->
+  <div
+    id="loading-screen"
+    class="loading-screen"
+    role="status"
+    aria-label="Loading the apples"
+  >
+    
+    <div class="loading-content">
+
+      <img
+        class="loading-logo"
+        src="./assets/greenapple-title.png"
+        alt="GREEN APPLE"
+      >
+
+      <div class="loading-message">
+        <span>Gathering apples</span>
+
+        <span class="loading-dots" aria-hidden="true">
+          <i></i><i></i><i></i>
+        </span>
+      </div>
+
+    </div>
+
+  </div>
+
 
 
 </body>
