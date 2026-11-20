@@ -122,7 +122,12 @@ const soundToggle = $('sound-toggle');
 
 function setSound(enabled) {
   soundEnabled = enabled;
+  if (enabled) {
+    unlockSfxOnGesture();
+  }
+
   syncSfxEnabled();
+  
 
   // 음악 재생 허용 또는 음소거
   audio.muted = !enabled;
@@ -1823,6 +1828,7 @@ canvas.addEventListener(
       const piece = pickRed(e);
 
       if (!piece) return;
+      unlockSfxOnGesture();
       
       stopIntroDragCue();
 
@@ -2184,6 +2190,46 @@ canvas.addEventListener(
 
    return sfxContext;
  }
+
+
+ // ========================================
+ // MOBILE AUDIO UNLOCK
+ // ========================================
+
+ function unlockSfxOnGesture() {
+
+   if (!soundEnabled) return;
+
+   const ctx = getSfxContext();
+
+   if (!ctx) return;
+
+   if (ctx.state === 'running') return;
+
+   // 사용자 터치 동작 안에서 즉시 활성화
+   void ctx.resume().catch(error => {
+     console.warn('Audio unlock failed:', error);
+   });
+
+   // 무음 버퍼로 모바일 오디오 시작 허용
+   const silentBuffer = ctx.createBuffer(
+     1,
+     128,
+     ctx.sampleRate
+   );
+
+   const source = ctx.createBufferSource();
+
+   source.buffer = silentBuffer;
+   source.connect(sfxMasterGain);
+
+   source.start(0);
+
+   source.onended = () => {
+     source.disconnect();
+   };
+ }
+
 
 
  // LOAD AND DECODE AUDIO

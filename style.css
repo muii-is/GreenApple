@@ -1574,3 +1574,35 @@ body::after {
   object-fit: contain;
 }
 
+
+/* SOUND ON — CLICKABLE TEXT */
+
+#sound-on {
+  min-height: 44px;
+  padding: 9px 14px;
+
+  cursor: pointer;
+}
+
+#sound-on > span {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1px;
+}
+
+/* ========================================
+   MOBILE GUIDE POSITION
+======================================== */
+
+@media (max-width: 300px) {
+
+  .intro-note,
+  .found-note {
+
+    top: calc(
+      120px + env(safe-area-inset-top)
+    );
+
+  }
+
+}
